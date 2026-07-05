@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Rumah Makan</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        .sidebar { height: 100vh; background-color: #84ea7d; color: rgb(204, 69, 69); padding-top: 20px; }
+        .sidebar a { color: #452fb4; text-decoration: none; padding: 10px 15px; display: block; cursor: pointer; }
+        .sidebar a:hover { background-color: #495057; color: rgb(99, 58, 58); }
+        .content { padding: 20px; }
+
+        /* PENGATURAN CETAK (PRINT) */
+        @media print {
+            .sidebar, .kotak-pencarian { display: none !important; }
+            .offset-md-2 { margin-left: 0 !important; }
+            .col-md-10 { width: 100% !important; max-width: 100% !important; }
+            .grafik-area { width: 100% !important; max-width: 100% !important; }
+            body { background-color: white !important; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-2 sidebar position-fixed">
+            <h4 class="text-center text-white mb-4">RM YangpentingMakan</h4>
+            
+            <small class="px-3 text-muted">MENU UTAMA</small>
+            <a href="dashboard.html">🏠 Dashboard</a>
+            <hr class="text-secondary">
+            
+            <small class="px-3 text-muted">DATA MASTER</small>  
+            <a href="Daftarmakan.html">📋 Daftar Makanan</a>       
+            <a href="#">🪑 Data Meja</a>
+            <a href="#">👥 Data Karyawan</a>
+            <hr class="text-secondary">
+            
+            <small class="px-3 text-muted">TRANSAKSI</small>
+            <a href="#">🛒 Buat Pesanan</a>
+            <a href="#">📝 Riwayat Transaksi</a>
+            <hr class="text-secondary">
+            
+            <small class="px-3 text-muted">LAPORAN (Cetak PDF)</small>
+            <a href="#" onclick="cetakPDFDenganGrafik(); return false;">📊 Laporan Penjualan</a>
+            <hr class="text-secondary">
+            
+            <a href="login.html" class="text-danger mt-5">🚪 Logout</a>
+        </div>
+
+        <div class="col-md-10 offset-md-2 content">
+            
+            <div id="area-cetak">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2>Laporan Penjualan</h2>
+                    <div class="kotak-pencarian">
+                        <span class="me-3">Halo, <strong>Admin</strong></span>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card text-white bg-primary mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title">Pendapatan Hari Ini</h5>
+                                <h3>Rp 2,6jt</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-white bg-success mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title">Total Transaksi</h5>
+                                <h3>48 Pesanan</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-white bg-warning mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title">Menu Terjual</h5>
+                                <h3>124 Porsi</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-white bg-danger mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title">Meja Terisi</h5>
+                                <h3>5 / 12 Meja</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-8 grafik-area">
+                        <div class="card">
+                            <div class="card-header">Grafik Penjualan (7 Hari Terakhir)</div>
+                            <div class="card-body text-center">
+                                <canvas id="salesChart"></canvas>
+                                <img id="grafikFoto" style="display: none; max-width: 100%; height: auto; margin: 0 auto;" />
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4 kotak-pencarian">
+                        <div class="card">
+                            <div class="card-header">Pencarian Data Transaksi</div>
+                            <div class="card-body">
+                                <form>
+                                    <div class="mb-3">
+                                        <label class="form-label">Tanggal Transaksi</label>
+                                        <input type="date" class="form-control">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Status Pesanan</label>
+                                        <select class="form-select">
+                                            <option>Selesai</option>
+                                            <option>Pending</option>
+                                        </select>
+                                    </div>
+                                    <button type="button" class="btn btn-primary w-100">Filter / Cari</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    // SCRIPT GRAFIK BAWAAN
+    const ctx = document.getElementById('salesChart').getContext('2d');
+    const salesChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'],
+            datasets: [{
+                label: 'Total Pendapatan (Juta Rp)',
+                data: [1.2, 1.9, 1.5, 2.2, 3.5, 4.2, 3.8],
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1,
+                fill: true,
+                backgroundColor: 'rgba(75, 192, 192, 0.2)'
+            }]
+        },
+        options: {
+            responsive: true,
+            animation: false 
+        }
+    });
+
+    // TRIK JITU UNTUK MENAMPILKAN GRAFIK SAAT DI-PRINT
+    function cetakPDFDenganGrafik() {
+        // Ambil elemen grafik dan gambar kosongnya
+        const canvas = document.getElementById('salesChart');
+        const grafikFoto = document.getElementById('grafikFoto');
+
+        // 1. Ubah grafik canvas menjadi gambar statis sungguhan
+        grafikFoto.src = canvas.toDataURL('image/png');
+
+        // 2. Tukar posisi: Sembunyikan canvas asli, tampilkan gambar fotonya
+        canvas.style.display = 'none';
+        grafikFoto.style.display = 'block';
+
+        // 3. Buka jendela Print / Save as PDF
+        window.print();
+
+        // 4. Kembalikan ke normal setelah 1 detik agar layar tetap rapi setelah nge-print
+        setTimeout(function() {
+            canvas.style.display = 'block';
+            grafikFoto.style.display = 'none';
+        }, 1000);
+    }
+</script>
+</body>
+</html>
